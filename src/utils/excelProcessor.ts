@@ -48,7 +48,7 @@ export const parseExcelFile = (file: File): Promise<CRMRecord[]> => {
           followupDate: formatDate(row[12]) || ''
         }));
         
-        resolve(records.filter(record => record.fullName)); // Filter out empty rows
+        resolve(records.filter(record => record.fullName && record.phone && record.phone.length > 0)); // Filter out empty rows and records without valid phone numbers
       } catch (error) {
         reject(new Error('Failed to parse Excel file: ' + error));
       }
@@ -122,21 +122,8 @@ export const findDuplicates = (records: CRMRecord[]) => {
 };
 
 export const generateSQLStatements = (records: CRMRecord[]): string[] => {
-  const filteredRecords = records.filter(record => {
-    console.log('Checking record for SQL generation:', {
-      slNo: record.slNo,
-      phone: record.phone,
-      phoneType: typeof record.phone,
-      phoneLength: record.phone ? record.phone.length : 0,
-      passesFilter: record.phone && record.phone.length > 0
-    });
-    return record.phone && record.phone.length > 0;
-  });
-  
-  console.log(`Total records: ${records.length}, Records with valid phone: ${filteredRecords.length}`);
-  
-  return filteredRecords.map(record => {
-    console.log('Generating SQL for phone:', record.phone);
+  // Since records are already filtered during parsing, all should have valid phones
+  return records.map(record => {
     const values = [
       record.slNo,
       `'${record.leadReceivedDate}'`,
