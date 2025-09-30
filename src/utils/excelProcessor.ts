@@ -1,6 +1,12 @@
 import * as XLSX from 'xlsx';
 import { CRMRecord, ProcessedData } from '../types/CRMData';
 
+const removeUnicode = (text: string): string => {
+  if (!text || typeof text !== 'string') return text;
+  // Remove Unicode characters, keep only ASCII characters (0-127)
+  return text.replace(/[^\x00-\x7F]/g, '');
+};
+
 const normalizePhoneNumber = (phoneValue: any): string => {
   if (!phoneValue) return '';
   
@@ -35,16 +41,16 @@ export const parseExcelFile = (file: File): Promise<CRMRecord[]> => {
         const records: CRMRecord[] = dataRows.map((row, index) => ({
           slNo: row[0] || index + 1,
           leadReceivedDate: formatDate(row[1]) || '',
-          fullName: row[2] || '',
-          email: row[3] || '',
+          fullName: removeUnicode(row[2] || ''),
+          email: removeUnicode(row[3] || ''),
           phone: normalizePhoneNumber(row[4]),
-          place: row[5] || '',
-          counselor: row[6] || '',
-          region: row[7] || '',
-          branch: row[8] || '',
-          preferredCountry: row[9] || 'Default',
-          ielts: row[10] || '',
-          latestRemarks: row[11] || '',
+          place: removeUnicode(row[5] || ''),
+          counselor: removeUnicode(row[6] || ''),
+          region: removeUnicode(row[7] || ''),
+          branch: removeUnicode(row[8] || ''),
+          preferredCountry: removeUnicode(row[9] || 'Default'),
+          ielts: removeUnicode(row[10] || ''),
+          latestRemarks: removeUnicode(row[11] || ''),
           followupDate: formatDate(row[12]) || ''
         }));
         
@@ -64,17 +70,21 @@ const formatDate = (dateValue: any): string => {
   
   // If it's already a string (formatted by Excel), return as is
   if (typeof dateValue === 'string') {
-    return dateValue.trim();
+    const trimmedDate = dateValue.trim();
+    // Convert DD/MM/YYYY or DD/MM/YY format to DD MM YYYY
+    return trimmedDate.replace(/\//g, ' ');
   }
   
   if (typeof dateValue === 'number') {
     // Excel date serial number
     const date = XLSX.SSF.parse_date_code(dateValue);
-    return `${date.d.toString().padStart(2, '0')}/${date.m.toString().padStart(2, '0')}/${date.y}`;
+    return `${date.d.toString().padStart(2, '0')} ${date.m.toString().padStart(2, '0')} ${date.y}`;
   }
   
   // For any other type, convert to string
-  return String(dateValue);
+  const stringDate = String(dateValue);
+  // Convert any forward slashes to spaces in the final string
+  return stringDate.replace(/\//g, ' ');
 };
 
 export const findDuplicates = (records: CRMRecord[]) => {
